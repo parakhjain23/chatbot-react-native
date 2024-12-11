@@ -1,74 +1,83 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { WebView } from 'react-native-webview';
+const { height, width } = Dimensions.get('screen');
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+interface ChatbotProps {
+  embedToken: string;
+  bridgeName: string;
+  threadId: string;
 }
 
+const Chatbot: React.FC<ChatbotProps> = ({ embedToken, bridgeName, threadId }) => {
+  const [chatbotProps, setChatProps] = useState({
+    embedToken: embedToken || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdfaWQiOiIxMjc3IiwiY2hhdGJvdF9pZCI6IjY2NTA2MjhhZDQ4ZTIwZTYxY2Y3MDFhMCIsInVzZXJfaWQiOiJwYXJha2gifQ.DVG23clKOXfIx91S5UU-50LDFLiC5jcIV0r15SVo2Yk",
+    bridgeName: bridgeName || "plugin",
+    threadId: threadId || "23"
+  });
+
+  useEffect(() => {
+    // Update the chatbotProps state with the new value and new value is not coming from the props take old value
+    setChatProps((prevProps) => ({
+      embedToken: embedToken || prevProps.embedToken,
+      bridgeName: bridgeName || prevProps.bridgeName,
+      threadId: threadId || prevProps.threadId
+    }));
+  }, [embedToken, bridgeName, threadId])
+
+  // Create the HTML string with the chatbot script
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Chatbot</title>
+    </head>
+    <body>
+      <script
+        id="chatbot-main-script"
+        embedToken="${chatbotProps.embedToken}"
+        bridgeName="${chatbotProps.bridgeName}"
+        threadId="${chatbotProps.threadId}"
+        src="https://chatbot-embed.viasocket.com/chatbot-prod.js"
+      ></script>
+    </body>
+    </html>
+  `;
+
+  const hasNotch = StatusBar.currentHeight > 24
+  const isChatOn = true;
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : null}
+        style={{
+          width: isChatOn ? width : 0,
+          height: isChatOn ? Platform.OS == 'android' ? '100%' : hasNotch ? height - StatusBar.currentHeight : height - StatusBar.currentHeight * 3 : 0,
+        }}
+      >
+        <View style={{ flex: 1, marginTop: Platform.OS == 'ios' ? 30 : 0 }} >
+          <WebView
+            originWhitelist={['*']}  // Allow all URLs
+            source={{ html: htmlContent }}  // Pass the HTML content
+            style={styles.webview}  // Apply some basic styles
+            containerStyle={{ flex: 1 }}
+            scalesPageToFit={false}
+            cacheMode='LOAD_CACHE_ELSE_NETWORK'
+            contentMode='mobile'
+            javaScriptEnabled
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  webview: {
+    flex: 1,  // Make sure the WebView takes up the full screen
   },
 });
+
+export default Chatbot;
